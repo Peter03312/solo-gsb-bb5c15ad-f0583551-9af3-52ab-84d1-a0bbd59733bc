@@ -229,6 +229,79 @@ function occupiedSummary(bands) {
   return bands.map((b) => `${fmt(b.lo)}–${fmt(b.hi)} MHz`).join('、');
 }
 
+/* ---------- 现场扫描采样导入 ---------- */
+
+let scanPreview = null;   // 最近一次预览结果（未确认，不参与协调）
+let scanConfirmed = null; // 已确认导入的区间（随协调请求与手填区间合并提交）
+
+function scanStatsText(s) {
+  return `${s.records} 条记录（${s.points} 个频点），${s.occupied} 个频点达到阈值，生成 ${s.bands.length} 个占用区间`;
+}
+
+function renderScanArea() {
+  const box = $('#scan-result');
+  const parts = [];
+  if (scanConfirmed) {
+    parts.push(`
+      <div class="scan-status confirmed">
+        <p class="ok-text" style="margin:0">✓ 已确认导入：${esc(scanStatsText(scanConfirmed))}，将与手填占用区间合并后参与本次协调。</p>
+        ${scanConfirmed.bands.length
+          ? `<p class="freq muted" style="margin:4px 0 0">🚧 ${esc(occupiedSummary(scanConfirmed.bands))}</p>`
+          : '<p class="muted" style="margin:4px 0 0">（无达到阈值的频点，未生成区间）</p>'}
+      </div>`);
+  }
+  if (scanPreview) {
+    parts.push(`
+      <div class="scan-status preview">
+        <p class="warn-text" style="margin:0">预览（未确认，暂不参与协调）：${esc(scanStatsText(scanPreview))}</p>
+        ${scanPreview.bands.length
+          ? `<p class="freq" style="margin:4px 0 0">${esc(occupiedSummary(scanPreview.bands))}</p>`
+          : '<p class="muted" style="margin:4px 0 0">没有频点达到阈值，未生成占用区间。</p>'}
+        <div class="scan-actions">
+          <button type="button" class="btn btn-sm btn-primary" id="btn-scan-confirm">确认导入这些区间</button>
+        </div>
+      </div>`);
+  }
+  box.innerHTML = parts.join('');
+  const confirmBtn = $('#btn-scan-confirm');
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', () => {
+      scanConfirmed = scanPreview;
+      scanPreview = null;
+      renderScanArea();
+      toast(`已导入 ${scanConfirmed.bands.length} 个扫描占用区间`);
+    });
+  }
+}
+
+$('#btn-scan-preview').addEventListener('click', async () => {
+  const btn = $('#btn-scan-preview');
+  btn.disabled = true;
+  try {
+    scanPreview = await api('/api/scan-bands', {
+      method: 'POST',
+      body: JSON.stringify({
+        csv: $('#scan-csv').value,
+        interval: Number($('#scan-interval').value),
+        threshold: Number($('#scan-threshold').value),
+      }),
+    });
+    renderScanArea();
+  } catch (e) {
+    toast(e.message, true);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+$('#btn-scan-clear').addEventListener('click', () => {
+  scanPreview = null;
+  scanConfirmed = null;
+  $('#scan-csv').value = '';
+  renderScanArea();
+  toast('已清除本次扫描导入');
+});
+
 $('#coord-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   let occupiedBands;
@@ -237,6 +310,10 @@ $('#coord-form').addEventListener('submit', async (e) => {
   } catch (err) {
     toast(err.message, true);
     return;
+  }
+  // 已确认导入的扫描区间与手填区间一并提交，由服务端统一校验并合并相交/相接区间
+  if (scanConfirmed && scanConfirmed.bands.length) {
+    occupiedBands = occupiedBands.concat(scanConfirmed.bands);
   }
   const btn = $('#btn-coordinate');
   btn.disabled = true;

@@ -4,7 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const express = require('express');
 const db = require('./db');
-const { mhzToHz, hzToMhz, computeConflicts, coordinate, normalizeOccupiedBands, findSwitchOrder } = require('./lib/intermod');
+const { mhzToHz, hzToMhz, computeConflicts, coordinate, normalizeOccupiedBands, scanCsvToBands, findSwitchOrder } = require('./lib/intermod');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -156,6 +156,27 @@ app.get('/api/conflicts', (req, res) => {
   const channels = toChannels(listDevices());
   const conflicts = computeConflicts(channels).map(conflictToJson);
   res.json({ count: conflicts.length, conflicts });
+});
+
+// ---------- 现场扫描采样导入 ----------
+
+/**
+ * 现场扫描采样 → 占用区间预览（纯计算，不写库，原始采样不入库）。
+ * body：{ csv, interval, threshold }
+ *   csv       无表头两列 CSV 文本（频率 MHz, 电平 dBm），空行忽略
+ *   interval  采样间隔（MHz，正数）
+ *   threshold 占用阈值（dBm，有限数值）
+ * 整批校验有限数值、正间隔与最多 1000 条非空记录，错误指出行号；
+ * 同频点取最高电平，达到阈值的频点扩展为 中心±半个采样间隔 的闭区间，
+ * 相交或端点相接的区间合并。返回 { bands, records, points, occupied }。
+ */
+app.post('/api/scan-bands', (req, res) => {
+  const body = req.body || {};
+  try {
+    res.json(scanCsvToBands(body.csv, body.interval, body.threshold));
+  } catch (e) {
+    badRequest(res, e.message);
+  }
 });
 
 // ---------- 自动协调 ----------

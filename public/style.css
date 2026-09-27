@@ -165,6 +165,54 @@ input:focus { outline: 2px solid var(--accent-dark); border-color: var(--accent)
 }
 .occupied-row input:focus { outline: 2px solid var(--accent-dark); border-color: var(--accent); }
 
+/* ---------- 现场扫描采样导入 ---------- */
+.scan-box {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--card-border);
+}
+#scan-csv {
+  width: 100%;
+  background: #121a2b;
+  border: 1px solid var(--card-border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  resize: vertical;
+  margin-top: 8px;
+}
+#scan-csv:focus { outline: 2px solid var(--accent-dark); border-color: var(--accent); }
+.scan-params {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.scan-params label { display: flex; flex-direction: column; gap: 4px; font-size: 0.84rem; color: var(--muted); }
+.scan-params input {
+  background: #121a2b;
+  border: 1px solid var(--card-border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px 9px;
+  font-size: 0.9rem;
+  font-family: var(--mono);
+  width: 140px;
+}
+.scan-params input:focus { outline: 2px solid var(--accent-dark); border-color: var(--accent); }
+.scan-status {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+}
+.scan-status.preview { border: 1px solid rgba(255, 184, 77, 0.45); background: rgba(255, 184, 77, 0.06); }
+.scan-status.confirmed { border: 1px solid rgba(63, 206, 124, 0.45); background: rgba(63, 206, 124, 0.06); }
+.scan-actions { margin-top: 8px; }
+
 .ok-text { color: var(--ok); }
 .danger-text { color: var(--danger); }
 .warn-text { color: var(--warn); }
